@@ -1,3 +1,6 @@
+//===============shipping functionality=======================
+
+
 // কার্টে সব প্রোডাক্ট virtual/downloadable অথবা shipping class 'digital-product' হলে শুধু free shipping দেখাবে
 add_filter( 'woocommerce_package_rates', 'show_only_free_shipping_for_digital_products', 10, 2 );
 function show_only_free_shipping_for_digital_products( $rates, $package ) {
@@ -38,3 +41,129 @@ add_filter( 'woodmart_shipping_progress_bar_enable', function( $enable ) {
     }
     return $enable;
 });
+
+
+/**
+ * Ensure "Free delivery" (free_shipping) only appears when a product has
+ * the shipping class with slug 'free-shipping'. This removes free_shipping
+ * rates that some plugins may add for other reasons.
+ */
+add_filter( 'woocommerce_package_rates', 'restrict_free_shipping_to_free_shipping_class', 999, 2 );
+function restrict_free_shipping_to_free_shipping_class( $rates, $package ) {
+    if ( empty( $rates ) || empty( $package['contents'] ) ) {
+        return $rates;
+    }
+
+    $has_free_class = false;
+    foreach ( $package['contents'] as $item ) {
+        $product_id = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
+        if ( ! $product_id ) {
+            continue;
+        }
+        $product = wc_get_product( $product_id );
+        if ( ! $product ) {
+            continue;
+        }
+        $shipping_class = $product->get_shipping_class(); // returns slug
+        if ( $shipping_class && 'free-shipping' === $shipping_class ) {
+            $has_free_class = true;
+            break;
+        }
+        // Also allow term name exact match as a fallback
+        if ( $shipping_class ) {
+            $term = get_term_by( 'slug', $shipping_class, 'product_shipping_class' );
+            if ( $term && ! is_wp_error( $term ) ) {
+                if ( 'Free Shipping' === $term->name || 'Free shipping' === $term->name ) {
+                    $has_free_class = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if ( ! $has_free_class ) {
+        foreach ( $rates as $rate_id => $rate ) {
+            if ( isset( $rate->method_id ) && 'free_shipping' === $rate->method_id ) {
+                unset( $rates[ $rate_id ] );
+            }
+        }
+    }
+
+    return $rates;
+}
+
+
+add_filter( 'woocommerce_package_rates', 'show_free_shipping_only_if_all_products_have_free_class', 999, 2 );
+function show_free_shipping_only_if_all_products_have_free_class( $rates, $package ) {
+    if ( empty( $rates ) || empty( $package['contents'] ) ) {
+        return $rates;
+    }
+
+    $all_have_free_class = true;
+    foreach ( $package['contents'] as $item ) {
+        $product_id = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
+        if ( ! $product_id ) {
+            $all_have_free_class = false;
+            break;
+        }
+        $product = wc_get_product( $product_id );
+        if ( ! $product ) {
+            $all_have_free_class = false;
+            break;
+        }
+        $shipping_class = $product->get_shipping_class(); // returns slug
+        if ( $shipping_class !== 'free-shipping' ) {
+            $all_have_free_class = false;
+            break;
+        }
+    }
+
+    if ( ! $all_have_free_class ) {
+        foreach ( $rates as $rate_id => $rate ) {
+            if ( isset( $rate->method_id ) && 'free_shipping' === $rate->method_id ) {
+                unset( $rates[ $rate_id ] );
+            }
+        }
+    }
+
+    return $rates;
+}
+
+
+//==============================
+
+add_filter( 'woocommerce_package_rates', 'show_free_shipping_only_if_all_products_have_free_class', 999, 2 );
+function show_free_shipping_only_if_all_products_have_free_class( $rates, $package ) {
+    if ( empty( $rates ) || empty( $package['contents'] ) ) {
+        return $rates;
+    }
+
+    $all_have_free_class = true;
+    foreach ( $package['contents'] as $item ) {
+        $product_id = isset( $item['product_id'] ) ? (int) $item['product_id'] : 0;
+        if ( ! $product_id ) {
+            $all_have_free_class = false;
+            break;
+        }
+        $product = wc_get_product( $product_id );
+        if ( ! $product ) {
+            $all_have_free_class = false;
+            break;
+        }
+        $shipping_class = $product->get_shipping_class(); // returns slug
+        if ( $shipping_class !== 'free-shipping' ) {
+            $all_have_free_class = false;
+            break;
+        }
+    }
+
+    if ( ! $all_have_free_class ) {
+        foreach ( $rates as $rate_id => $rate ) {
+            if ( isset( $rate->method_id ) && 'free_shipping' === $rate->method_id ) {
+                unset( $rates[ $rate_id ] );
+            }
+        }
+    }
+
+    return $rates;
+}
