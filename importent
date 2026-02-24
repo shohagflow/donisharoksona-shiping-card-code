@@ -1,0 +1,40 @@
+// কার্টে সব প্রোডাক্ট virtual/downloadable অথবা shipping class 'digital-product' হলে শুধু free shipping দেখাবে
+add_filter( 'woocommerce_package_rates', 'show_only_free_shipping_for_digital_products', 10, 2 );
+function show_only_free_shipping_for_digital_products( $rates, $package ) {
+    $all_virtual_or_free = true;
+    foreach ( $package['contents'] as $item ) {
+        $product = $item['data'];
+        $shipping_class = $product->get_shipping_class();
+        if ( ! $product->is_virtual() && ! $product->is_downloadable() && $shipping_class !== 'digital-product' ) {
+            $all_virtual_or_free = false;
+            break;
+        }
+    }
+    if ( $all_virtual_or_free ) {
+        foreach ( $rates as $rate_id => $rate ) {
+            if ( 'free_shipping' !== $rate->method_id ) {
+                unset( $rates[ $rate_id ] );
+            }
+        }
+    }
+    return $rates;
+}
+
+// কার্টে সব প্রোডাক্ট virtual/downloadable অথবা shipping class 'digital-product' হলে progress bar hide করবে
+add_filter( 'woodmart_shipping_progress_bar_enable', function( $enable ) {
+    $cart = WC()->cart->get_cart();
+    if ( empty( $cart ) ) return $enable;
+    $all_virtual_or_free = true;
+    foreach ( $cart as $cart_item ) {
+        $product = $cart_item['data'];
+        $shipping_class = $product->get_shipping_class();
+        if ( ! $product->is_virtual() && ! $product->is_downloadable() && $shipping_class !== 'digital-product' ) {
+            $all_virtual_or_free = false;
+            break;
+        }
+    }
+    if ( $all_virtual_or_free ) {
+        return false; // Hide progress bar if all products are virtual/downloadable or free shipping class
+    }
+    return $enable;
+});
